@@ -1,183 +1,238 @@
-
-
-//const zoom = 10;
 const w = 50;
 const h = 50;
-const lineG = 10;
-var path = [];
-var grids;
+const lineG = 15;
 
-var sNode,eNode,curNode;
 
+var start = false;
+var sNode, eNode, curNode;
+var grids = [];
 var closedSet = [];
 var openSet = [];
+var path = [];
+var phase = 0;
 
-class node{
-    constructor(x,y,i,j,previous){
+class node {
+    constructor(x, y, i, j) {
         this.x = x;
         this.y = y;
         this.i = i;
         this.j = j;
-        this.previous = this.previous;
-        this.closestN;
-        
+        this.g = 1;
+        this.previous = undefined;
+        this.closestN = null;
+        this.start = false;
+        this.end = false;
+        this.isObstacle = false;
+        this.neighbors = [];
+
     }
 
-    setClosestN(closestN){
-        this.closestN = closestN;
+    addNeighbors(i, j) {
+        if (i < lineG - 1)
+            this.neighbors.push(grids[i + 1][j]);
+        if (i > 0)
+            this.neighbors.push(grids[i - 1][j]);
+        if (j < lineG - 1)
+            this.neighbors.push(grids[i][j + 1]);
+        if (j > 0)
+            this.neighbors.push(grids[i][j - 1]);
+
     }
+
+
 
     show() {
-        rect(this.x,this.y,w,h);        
+        rect(this.x, this.y, w, h);     
+        fill(0)
+        //text(this.g, this.x, this.y + h/2)
+        //text(this.i + "-" + this.j, this.x, this.y + h);
+
     }
 }
 
-function setup() {   
+function setup() {
 
-    createCanvas(w*lineG + 1,h*lineG +1)
+    createCanvas(w * lineG + 1, h * lineG + 1)
     strokeWeight(1)
-    background(255);       
+    background(255);
 
-    grids = [];
-    for( let  i =0 ; i < lineG ; i++){
-        for (let j =0 ; j < lineG ; j++){
+    
+    for (let i = 0; i < lineG; i++) {
+        for (let j = 0; j < lineG; j++) {
             grids[i] = [];
         }
+
+    }
+    //Initialize grids
+    for (let i = 0; i < lineG; i++) {
+        for (let j = 0; j < lineG; j++) {
+            grids[i][j] = new node(j * w, i * h, i, j);
+        }
+    }
+
+
+
+
+
+}
+
+//Pick Neighbors and obstacles then start the game
+function mouseClicked() {
+    phase++;
+    for (let i = 0; i < lineG; i++) {
+        for (let j = 0; j < lineG; j++) {
+            if (mouseX <= grids[i][j].x + w && mouseX >= grids[i][j].x && mouseY >= grids[i][j].y && mouseY <= grids[i][j].y + h) {
+                if (phase == 1) {
+                    grids[i][j].start = true;
+                    sNode = grids[i][j]
+                } else if (phase == 2) {
+                    grids[i][j].end = true;
+                    eNode = grids[i][j];
+                    start = true;
+                    init();
+                } 
+            }
+        }
+    }
+
+}
+
+function initWeights(cur) {   
+
+    for (let i = 0; i < cur.neighbors.length; i++) {
+        var nei = cur.neighbors[i]; //For cur node every single neighbor
+        tmpG = cur.g + 1;
+
+        if (!closedSet.includes(nei)) { //If neighbor doesnt exist in the closed set
+            if (!openSet.includes(nei)) { //If neighbor doesnt exist in the open set
+                nei.g = tmpG;
+                openSet.push(nei);
+            } else {
+                if (tmpG < nei.g)
+                    nei.g = tmpG;
+            }
+            nei.previous = cur;
+        }
+
         
-    }
 
-    for( let  i =0 ; i < lineG ; i++){
-        for (let j =0 ; j < lineG ; j++){
-            grids[i][j] = new node(j*w,i*h,i,j,null);
-        }        
-    }
-    sNode = grids [0][0]
-    eNode = grids [lineG-1][lineG-1];
 
-    for( let  i =0 ; i < lineG ; i++){
-        for (let j =0 ; j < lineG ; j++){            
-            grids[i][j].setClosestN(pickNeighbor(grids[i][j]));
-        }        
+    }
+}
+
+function manhattanD(cur) {
+    return (abs(cur.x - eNode.x) + abs(cur.y - eNode.y));
+}
+
+function removeFromArray(cur) {
+    for (let i = openSet.length - 1; i >= 0; i--) {
+        if (openSet[i] == cur)
+            openSet.splice(i, 1);
+    }
+}
+
+function init() {
+
+    for (let i = 0; i < lineG; i++) {
+        for (let j = 0; j < lineG; j++) {
+            grids[i][j].addNeighbors(i, j);
+        }
     }
     
 
-    
     curNode = sNode;
-
     openSet.push(sNode);
-    
 }
 
-function pickNeighbor(cur) {
-    var distance = Infinity;
-    var tmp;
-    var closestN = null;
-
-    if(cur.i == 0){        
-        //koita katw
-        tmp = manhattanD(grids[cur.i + 1][cur.j]); //down neighbor
-        if(tmp < distance){
-            distance  = tmp;
-            closestN = grids[cur.i + 1][cur.j];
-        }
-    }else if(cur.i == 9){
-        //koita panw
-        tmp = manhattanD(grids[cur.i - 1][cur.j]); //up neighbor
-        if(tmp < distance){
-            distance  = tmp;
-            closestN = grids[cur.i - 1][cur.j];
-        }
-    }else{
-        tmp = manhattanD(grids[cur.i - 1][cur.j]); //up neighbor
-        if(tmp < distance){
-            distance  = tmp;
-            closestN = grids[cur.i - 1][cur.j];
-        }
-        tmp = manhattanD(grids[cur.i + 1][cur.j]); //down neighbor
-        if(tmp < distance){
-            distance  = tmp;
-            closestN = grids[cur.i + 1][cur.j];  
-        }
-    }
-
-    if(cur.j  == 0 ){
-        //koita de3ia   
-        tmp = manhattanD(grids[cur.i][cur.j+1]); //right neighbor
-        if(tmp < distance){
-            distance  = tmp;
-            closestN = grids[cur.i][cur.j+1];
-        }    
-    }else if(cur.j == 9){
-        //koita aristera
-        tmp = manhattanD(grids[cur.i][cur.j-1]); //left
-        if(tmp < distance){
-            distance  = tmp;
-            closestN = grids[cur.i][cur.j-1];
-        }
-    }else{
-        tmp = manhattanD(grids[cur.i][cur.j+1]); //right neighbor
-        if(tmp < distance){
-            distance  = tmp;
-            closestN = grids[cur.i][cur.j+1];
-        }   
-
-        //koita aristera
-        tmp = manhattanD(grids[cur.i][cur.j-1]); //left neighbor
-        if(tmp < distance){
-            distance  = tmp;
-            closestN = grids[cur.i][cur.j-1];
-        }
-
-    }
-
-  
-    if(cur.i == 1 && cur.j == 0){
-        console.log("Closet nei for 1-0 is " + closestN.i + "-" + closestN.j);
-        console.log("distance" + distance)
-    }
-        
-
-    return closestN;
-
-
-}
-
-function manhattanD(cur) {    
-    return (abs(cur.x-eNode.x) + abs(cur.y-eNode.y));
-}
-
-function draw() {       
+function draw() {
     fill(255)
     stroke(0);
-     
-    for( let  i =0 ; i < lineG ; i++){
-        for (let j =0 ; j < lineG ; j++){            
+
+    if (openSet.length == 0) {
+        //no solution
+    }
+
+    for (let i = 0; i < lineG; i++) {
+        for (let j = 0; j < lineG; j++) {
+            if (grids[i][j].start || grids[i][j].end)
+                fill(0)
+            else
+                fill(255)
+
             grids[i][j].show();
-        }        
-    } 
-    
-    
-    for(let  i =0 ; i < lineG ; i++){
-        for (let j =0 ; j < lineG ; j++){  
-            fill(255)
-            grids[i][j].closestN.show(); 
-                   
-        }        
-    } 
-
-    if(curNode != eNode){        
-        curNode = curNode.closestN;
-        openSet.push(curNode)
+        }
     }
 
-    for(let i =0 ;i < openSet.length ; i ++){
-        fill(0,255,0);
-        if(i == openSet.length -1)
-            fill(0,0,255);
-        openSet[i].show();
-    }
+    if (start) {            
         
-    
-  
-}
+        initWeights(curNode);           
 
+        lowI = 0;
+        for (let i = 0; i < openSet.length; i++) {
+            fill(255, 0, 0);
+            if (openSet[i].g < openSet[lowI].g)
+                lowI = i;
+        }
+
+        //openSet.previous = curNode;
+        curNode = openSet[lowI];
+
+        removeFromArray(curNode);
+        closedSet.push(curNode);
+
+      
+        
+        
+
+        /*--- Drawing on screen --- */        
+        for (let i = 0; i < closedSet.length; i++) {
+            fill(0, 255, 0);
+            closedSet[i].show();
+        }
+
+
+        for (let i = 0; i < openSet.length; i++) {
+            fill(255, 0, 0);
+            openSet[i].show();
+        }
+
+        //path
+        path = [];
+        tmp = curNode;            
+        path.push(tmp);       
+        
+        saveme = 0;
+        while (tmp.previous) {
+            saveme ++;
+            //console.log(tmp.i + "-" + tmp.j)            
+            path.push(tmp.previous)
+            tmp = tmp.previous;
+            if(saveme >= 20)
+                break;
+        }
+
+        for (let i = 0; i < path.length; i++) {
+            fill(0, 0, 255)
+            path[i].show();
+        }
+        
+
+        if (curNode === eNode) {
+            console.log("finished")            
+            console.log(`eNode previous : ${eNode.previous.i} - ${eNode.previous.j}`);
+            
+            //console.log(path)
+            noLoop();
+
+        }
+
+    }
+
+    
+
+
+
+
+
+
+}
