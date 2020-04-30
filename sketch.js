@@ -11,6 +11,8 @@ var openSet = [];
 var path = [];
 var phase = 0;
 
+var info = "Chose the start";
+
 class node {
     constructor(x, y, i, j) {
         this.x = x;
@@ -39,8 +41,6 @@ class node {
 
     }
 
-
-
     show() {
         rect(this.x, this.y, w, h);     
         fill(0)
@@ -51,11 +51,9 @@ class node {
 }
 
 function setup() {
-
-    createCanvas(w * lineG + 1, h * lineG + 1)
+    createCanvas(w * lineG + 1, h * lineG + 40)
     strokeWeight(1)
     background(255);
-
     
     for (let i = 0; i < lineG; i++) {
         for (let j = 0; j < lineG; j++) {
@@ -70,10 +68,6 @@ function setup() {
         }
     }
 
-
-
-
-
 }
 
 //Pick Neighbors and obstacles then start the game
@@ -81,27 +75,43 @@ function mouseClicked() {
     phase++;
     for (let i = 0; i < lineG; i++) {
         for (let j = 0; j < lineG; j++) {
-            if (mouseX <= grids[i][j].x + w && mouseX >= grids[i][j].x && mouseY >= grids[i][j].y && mouseY <= grids[i][j].y + h) {
-                if (phase == 1) {
+            if (mouseX < grids[i][j].x + w && mouseX >grids[i][j].x && mouseY > grids[i][j].y && mouseY < grids[i][j].y + h) {
+                if (phase == 1) {                   
                     grids[i][j].start = true;
-                    sNode = grids[i][j]
+                    sNode = grids[i][j];
+                    info = "Chose the end";
                 } else if (phase == 2) {
                     grids[i][j].end = true;
-                    eNode = grids[i][j];
-                    start = true;
-                    init();
-                } 
+                    eNode = grids[i][j]; 
+                    info = "Make obstacles and press Enter!"                 
+                }else if(phase >= 3){                    
+                    grids[i][j].isObstacle = true;                 
+                }
             }
         }
     }
 
 }
 
+function keyPressed(){
+    if (keyCode === RETURN) {        
+        start = true;
+        init();
+    }
+    
+}
+
 function initWeights(cur) {   
+
+    if(cur.isObstacle)
+        return;
 
     for (let i = 0; i < cur.neighbors.length; i++) {
         var nei = cur.neighbors[i]; //For cur node every single neighbor
         tmpG = cur.g + 1;
+
+        if(nei.isObstacle)
+            continue;
 
         if (!closedSet.includes(nei)) { //If neighbor doesnt exist in the closed set
             if (!openSet.includes(nei)) { //If neighbor doesnt exist in the open set
@@ -113,9 +123,6 @@ function initWeights(cur) {
             }
             nei.previous = cur;
         }
-
-        
-
 
     }
 }
@@ -146,25 +153,34 @@ function init() {
 
 function draw() {
     fill(255)
-    stroke(0);
-
-    if (openSet.length == 0) {
-        //no solution
-    }
+    stroke(0);    
+    
+    rect(0,height-45,width,height)
+    fill(0);
+    textSize(35)
+    text(info,0,height-10)
+    
 
     for (let i = 0; i < lineG; i++) {
         for (let j = 0; j < lineG; j++) {
-            if (grids[i][j].start || grids[i][j].end)
-                fill(0)
+            if (grids[i][j].start || grids[i][j].end || grids[i][j].isObstacle)
+                fill(0);  
             else
                 fill(255)
-
-            grids[i][j].show();
+             
+                grids[i][j].show();
+                     
         }
     }
 
-    if (start) {            
-        
+    
+
+    if (start) {       
+        if (openSet.length == 0) {
+            //no solution
+            info = "No solution";
+            console.log("No solution");            
+        }        
         initWeights(curNode);           
 
         lowI = 0;
@@ -180,10 +196,6 @@ function draw() {
         removeFromArray(curNode);
         closedSet.push(curNode);
 
-      
-        
-        
-
         /*--- Drawing on screen --- */        
         for (let i = 0; i < closedSet.length; i++) {
             fill(0, 255, 0);
@@ -196,19 +208,29 @@ function draw() {
             openSet[i].show();
         }
 
+        for (let i = 0; i < lineG; i++) {
+            for (let j = 0; j < lineG; j++) {
+                if (grids[i][j].start || grids[i][j].end || grids[i][j].isObstacle){
+                    fill(0);
+                    grids[i][j].show();
+                }
+                    
+            }
+        }
+
         //path
         path = [];
         tmp = curNode;            
         path.push(tmp);       
         
-        saveme = 0;
+        //saveme = 0;
         while (tmp.previous) {
-            saveme ++;
+            //saveme ++;
             //console.log(tmp.i + "-" + tmp.j)            
             path.push(tmp.previous)
             tmp = tmp.previous;
-            if(saveme >= 20)
-                break;
+            //if(saveme >= 20)
+               // break;
         }
 
         for (let i = 0; i < path.length; i++) {
@@ -216,23 +238,20 @@ function draw() {
             path[i].show();
         }
         
-
         if (curNode === eNode) {
-            console.log("finished")            
+            info = "Finished";           
             console.log(`eNode previous : ${eNode.previous.i} - ${eNode.previous.j}`);
-            
+            fill(255);
+            rect(0,height-45,width,height)
+            fill(0);
+            textSize(35)
+            text(info,0,height-10)
             //console.log(path)
             noLoop();
 
         }
 
     }
-
-    
-
-
-
-
 
 
 }
